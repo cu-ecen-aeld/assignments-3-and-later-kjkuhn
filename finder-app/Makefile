@@ -1,11 +1,11 @@
 
-ifeq ($(CROSS_COMPILE),)
-	CROSS_COMPILE =
+ifdef CROSS_COMPILE
+	CC_PREFIX = aarch64-none-linux-gnu-
 else
-	CROSS_COMPILE = aarch64-none-linux-gnu-
+	CC_PREFIX =
 endif
 
-CC = $(CROSS_COMPILE)gcc
+CC = $(CC_PREFIX)gcc
 CFLAGS = -Wall
 
 WRITER_OBJ = writer.o
