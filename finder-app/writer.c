@@ -21,7 +21,11 @@ int main(int argc, char **argv)
         fprintf(stderr, "Failed to open file %s\n", argv[1]);
         closelog();
         return 1;
+    } 
+    else {
+        syslog(LOG_INFO, "Opened file %s", argv[1]);
     }
+
     if(fputs(argv[2], f) == EOF)
     {
         syslog(LOG_ERR, "Failed to write to file %s", argv[1]);
@@ -30,6 +34,10 @@ int main(int argc, char **argv)
         closelog();
         return 1;
     }
+    else {
+        syslog(LOG_INFO, "Wrote string to file %s", argv[1]);
+    }
+    
     fclose(f);
     closelog();
     return 0;
