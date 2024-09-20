@@ -15,10 +15,16 @@ fi
 
 file_count=$(find "$filesdir" -type f | wc -l)
 occurences=0
-while IFS= read -r -d '' file; do
-    count=$(grep -c "$searchstr" "$file")
-    occurences=$((occurences + count))
-done < <(find "$filesdir" -type f -print0)
+# while IFS= read -r -d '' file; do
+#     count=$(grep -c "$searchstr" "$file")
+#     occurences=$((occurences + count))
+# done < <(find "$filesdir" -type f -print0)
 
+for file in $filesdir/*; do
+    if [ -f "$file" ]; then
+        count=$(grep -c "$searchstr" "$file")
+        occurences=$((occurences + count)) 
+    fi
+done
 
 echo "The number of files are ${file_count} and the number of matching lines are ${occurences}"
