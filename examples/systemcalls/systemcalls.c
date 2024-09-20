@@ -104,15 +104,17 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     va_list args;
     va_start(args, count);
     char * command[count+1];
-    int i, pid, status, fd;
+    int i, status, fd;
+    pid_t pid;
     for(i=0; i<count; i++)
     {
         command[i] = va_arg(args, char *);
+        printf("command[%d]: %s\n", i, command[i]);
     }
     command[count] = NULL;
     // this line is to avoid a compile warning before your implementation is complete
     // and may be removed
-    command[count] = command[count];
+    //command[count] = command[count];
 
 
 /*
@@ -122,43 +124,36 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *   The rest of the behaviour is same as do_exec()
  *
 */
-    fd = open("output.txt", O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    if(fd == -1)
-    {
-        va_end(args);
-        return false;
-    }
-    if(dup2(fd, STDOUT_FILENO) == -1)
-    {
-        va_end(args);
-        close(fd);
-        return false;
-    }
+    fflush(stdout);
     pid = fork();
     if(pid == 0)
     {
-        execv(command[0], command);
+        fd = open(outputfile, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        if(fd == -1)
+        {
+            exit(-1);
+        }
+        dup2(fd, STDOUT_FILENO);
+        close(fd);
+        i = execv(command[0], command);
+        exit(i);
     }
     else if(pid < 0)
     {
         va_end(args);
-        close(fd);
         return false;
     }
     else
     {
-        i = wait(&status);
+        i = waitpid(pid, &status, 0);
     }
 
     va_end(args);
 
-    if(i == -1 || (WIFEXITED(status) == 0 && WEXITSTATUS(status) != 0))
+    if(i == -1 || ((int) WEXITSTATUS(status) != 0))
     {
-        close(fd);
         return false;
     }
-    close(fd);
-
 
     return true;
 }
