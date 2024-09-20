@@ -1,4 +1,11 @@
 #include "systemcalls.h"
+#include "sys/wait.h"
+#include "sys/types.h"
+#include "unistd.h"
+#include "stdlib.h"
+#include "stdio.h"
+#include "stdint.h"
+#include "fcntl.h"
 
 /**
  * @param cmd the command to execute with system()
@@ -16,8 +23,9 @@ bool do_system(const char *cmd)
  *   and return a boolean true if the system() call completed with success
  *   or false() if it returned a failure
 */
+    int result = system(cmd);
 
-    return true;
+    return result == 0;
 }
 
 /**
@@ -39,7 +47,7 @@ bool do_exec(int count, ...)
     va_list args;
     va_start(args, count);
     char * command[count+1];
-    int i;
+    int i, pid, status;
     for(i=0; i<count; i++)
     {
         command[i] = va_arg(args, char *);
@@ -58,8 +66,26 @@ bool do_exec(int count, ...)
  *   as second argument to the execv() command.
  *
 */
+    pid = fork();
+    if(pid == 0)
+    {
+        execv(command[0], &command[1]);
+    }
+    else if(pid < 0)
+    {
+        return false;
+    }
+    else
+    {
+        i = wait(&status);
+    }
 
     va_end(args);
+
+    if(i == -1 || (WIFEXITED(status) == 0 && WEXITSTATUS(status) != 0))
+    {
+        return false;
+    }
 
     return true;
 }
@@ -74,7 +100,7 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     va_list args;
     va_start(args, count);
     char * command[count+1];
-    int i;
+    int i, pid, status, fd;
     for(i=0; i<count; i++)
     {
         command[i] = va_arg(args, char *);
@@ -92,6 +118,39 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *   The rest of the behaviour is same as do_exec()
  *
 */
+    fd = open("output.txt", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if(fd == -1)
+    {
+        return false;
+    }
+    if(dup2(fd, STDOUT_FILENO) == -1)
+    {
+        close(fd);
+        return false;
+    }
+    pid = fork();
+    if(pid == 0)
+    {
+        execv(command[0], &command[1]);
+    }
+    else if(pid < 0)
+    {
+        close(fd);
+        return false;
+    }
+    else
+    {
+        i = wait(&status);
+    }
+
+    va_end(args);
+
+    if(i == -1 || (WIFEXITED(status) == 0 && WEXITSTATUS(status) != 0))
+    {
+        close(fd);
+        return false;
+    }
+    close(fd);
 
     va_end(args);
 
