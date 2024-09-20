@@ -13,6 +13,9 @@ FINDER_APP_DIR=$(realpath $(dirname $0))
 ARCH=arm64
 CROSS_COMPILE=aarch64-none-linux-gnu-
 
+echo "Installing dependencies"
+apt install -y curl
+
 if [ $# -lt 1 ]
 then
 	echo "Using default directory ${OUTDIR} for output"
@@ -103,6 +106,7 @@ if [ -e "${OUTDIR}/bash-5.2.tar.gz" ]
 then
     rm "${OUTDIR}/bash-5.2.tar.gz"
 fi
+
 curl -L -o bash-5.2.tar.gz https://ftp.gnu.org/gnu/bash/bash-5.2.tar.gz
 tar xzf bash-5.2.tar.gz
 cd bash-5.2
