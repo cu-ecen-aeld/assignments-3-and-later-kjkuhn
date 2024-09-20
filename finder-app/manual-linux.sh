@@ -14,7 +14,7 @@ ARCH=arm64
 CROSS_COMPILE=aarch64-none-linux-gnu-
 
 echo "Installing dependencies"
-apt install -y curl
+apt update && apt install -y curl
 
 if [ $# -lt 1 ]
 then
