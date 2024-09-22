@@ -1,16 +1,40 @@
 #!/bin/sh
 
 
-trap 'echo "Exiting .."; kill $(pgrep) aesdsock; exit 0' SIGINT
+DAEMON_PATH="/usr/bin/aesdsocket"  # Updated path
 
-if [ -e "aesdsock" ] then
-    echo "starting aesd sock"
-    aesdsock -d
-else
-    echo "aesdsock not found"
-    exit(-1)
-fi
+NAME=aesdsocket
+PIDFILE=/var/run/$NAME.pid
+USER=root  # Adjust if needed
 
-while true; do
-    sleep 1
-done
+case "$1" in
+  start)
+    echo "Starting $NAME..."
+    start-stop-daemon --start --background \
+                      --pidfile $PIDFILE \
+                      --make-pidfile \
+                      --user $USER \
+                      --exec $DAEMON_PATH \
+                      -- -d  # Pass the -d option to aesdsocket
+    ;;
+  stop)
+    echo "Stopping $NAME..."
+    start-stop-daemon --stop --pidfile $PIDFILE
+    ;;
+  restart)
+    echo "Restarting $NAME..."
+    start-stop-daemon --stop --pidfile $PIDFILE
+    start-stop-daemon --start --background \
+                      --pidfile $PIDFILE \
+                      --make-pidfile \
+                      --user $USER \
+                      --exec $DAEMON_PATH \
+                      -- -d 
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart}"
+    exit 1
+    ;;
+esac
+
+exit 0
