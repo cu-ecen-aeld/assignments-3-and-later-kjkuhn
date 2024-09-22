@@ -70,6 +70,10 @@ int main(int argc, char **argv)
     sa.sin_addr.s_addr = INADDR_ANY;
     sa.sin_family = AF_INET;
     sa.sin_port = htons(9000);
+    if(setsockopt(server, SOL_SOCKET, SO_REUSEADDR, &run, sizeof(run)) < 0)
+    {
+        goto return_error;
+    }
     if(bind(server, (struct sockaddr*)&sa, sizeof(sa)) < 0)
     {
         goto return_error;
