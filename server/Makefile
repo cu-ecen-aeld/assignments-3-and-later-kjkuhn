@@ -1,7 +1,7 @@
 CC = $(CROSS_COMPILE)gcc
-CFLAGS ?= -Wall
-LDFLAGS ?= -g -pthread
-
+CFLAGS ?= -g -Wall
+LDFLAGS ?= 
+LIBS = -lrt -pthread
 
 AESD_SOURCES = aesdsocket.c
 
@@ -9,7 +9,7 @@ AESD_SOURCES = aesdsocket.c
 all: aesdsocket
 
 aesdsocket: $(AESD_SOURCES:.c=.o)
-	$(CC) $(LDFLAGS) $^ -o $@
+	$(CC) $(LDFLAGS) $^ $(LIBS) -o $@
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
