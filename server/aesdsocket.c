@@ -10,6 +10,12 @@
 #include "error.h"
 #include "syslog.h"
 #include "signal.h"
+#include "time.h"
+#include "sys/queue.h"
+#include "pthread.h"
+
+
+
 
 #define BUFFER_SIZE 1024
 #define OFN "/var/tmp/aesdsocketdata"
@@ -19,11 +25,15 @@ struct client_t {
     struct sockaddr_in addr;
     int addr_len;
     int sd;
+    pthread_t tid;
+    LIST_ENTRY(client_t) entries;
 };
 
 
 int server;
 volatile int run;
+LIST_HEAD(client_list, client_t) cl_head;
+pthread_mutex_t wr_mtx;
 
 void sd_handler(int sig)
 {
@@ -35,6 +45,92 @@ void sd_handler(int sig)
     }
 }
 
+void* thread_entry(void *args)
+{
+    int recv_len;
+    char buffer[BUFFER_SIZE];
+    FILE *file;
+    struct client_t *c = (struct client_t*)args;
+    pthread_mutex_lock(&wr_mtx);
+    file = fopen(OFN, "a");
+    while(1)
+    {
+        memset(buffer, 0, BUFFER_SIZE);
+        recv_len = recv(c->sd, buffer, BUFFER_SIZE-1, 0);
+        if(recv_len < 0)
+        {
+            goto t_exit_with_error;
+        }
+        else if(recv_len == 0)
+        {
+            //client terminated connection
+            break;
+        }
+        fputs(buffer, file);
+        if(recv_len < BUFFER_SIZE && buffer[recv_len-1] == '\n')
+        {
+            file = freopen(OFN, "r", file);
+            while(fgets(buffer, BUFFER_SIZE, file) != 0)
+            {
+                if(send(c->sd, buffer, strlen(buffer), 0) < 0)
+                {
+                    goto t_exit_with_error;
+                }
+            }
+            break;
+        }
+    }
+    fclose(file);
+    pthread_mutex_unlock(&wr_mtx);
+    close(c->sd);
+    syslog(LOG_INFO, "Closed connection from %s\n", inet_ntoa(c->addr.sin_addr));
+    return 0;
+
+t_exit_with_error:
+    syslog(LOG_ERR, "%s (CODE %d)", strerror(errno), errno);
+    close(c->sd);
+    fclose(file);
+    pthread_mutex_unlock(&wr_mtx);
+    return 0;
+}
+
+
+void wait_for_threads()
+{
+    struct client_t *it;
+
+    LIST_FOREACH(it, &cl_head, entries)
+    {
+        pthread_join(it->tid, 0);
+    }
+    while(!LIST_EMPTY(&cl_head))
+    {
+        it = LIST_FIRST(&cl_head);
+        LIST_REMOVE(it, entries);
+        free(it);
+    }
+
+}
+
+
+void timer_handler(union sigval args)
+{
+    FILE *f;
+    time_t ct;
+    struct tm *ti;
+    char ts[100];
+
+    time(&ct);
+    ti = localtime(&ct);
+    strftime(ts, 100, "timestamp:%a, %d %b %Y %H:%M:%S %z", ti);
+    f = fopen(OFN, "a");
+    pthread_mutex_lock(&wr_mtx);
+    fprintf(f, "%s\n", ts);
+    pthread_mutex_unlock(&wr_mtx);
+    fclose(f);
+}
+
+
 int main(int argc, char **argv)
 {
     struct sockaddr_in sa;
@@ -45,6 +141,13 @@ int main(int argc, char **argv)
     FILE *file;
     int daemon = 0;
     int opt;
+    struct client_t *entry;
+    timer_t timer;
+    struct sigevent sev;
+    struct itimerspec its;
+
+    LIST_INIT(&cl_head);
+    pthread_mutex_init(&wr_mtx, 0);
 
     while((opt = getopt(argc, argv, "d")) != -1)
     {
@@ -59,6 +162,8 @@ int main(int argc, char **argv)
     run = 1;
     signal(SIGINT, sd_handler);
     signal(SIGTERM, sd_handler);
+    
+
     openlog("aesdsocket", LOG_PID | LOG_CONS, LOG_USER); 
     server = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (server < 0)
@@ -83,24 +188,36 @@ int main(int argc, char **argv)
         goto return_error;
     }
 
+    if(daemon)
+    {
+        daemon = fork();
+        if(daemon == -1)
+            goto return_error;
+        else if(daemon != 0)
+        {
+            syslog(LOG_INFO, "running daemonized");
+            return 0;
+        }
+    }
+
+    memset(&sev, 0, sizeof(sev));
+    sev.sigev_notify = SIGEV_THREAD;
+    sev.sigev_notify_function = timer_handler;
+    sev.sigev_value.sival_ptr = NULL;
+    timer_create(CLOCK_MONOTONIC, &sev, &timer);
+    memset(&its, 0, sizeof(its));
+    its.it_value.tv_sec = 10;
+    its.it_interval.tv_sec = 10;
+    timer_settime(timer, 0, &its, 0);
     while(run)
     {
-        if(daemon)
-        {
-            daemon = fork();
-            if(daemon == -1)
-                goto return_error;
-            else if(daemon != 0)
-            {
-                syslog(LOG_INFO, "running daemonized");
-                return 0;
-            }
-        }
         syslog(LOG_INFO, "waiting for connections on port %hd", ntohs(sa.sin_port));
         memset(&c, 0, sizeof(struct client_t));
-        c.sd = accept(server, (struct sockaddr*)&c.addr, &c.addr_len);
-        if(c.sd < 0)
+        entry = (struct client_t*)calloc(1, sizeof(struct client_t));
+        entry->sd = accept(server, (struct sockaddr*)&entry->addr, &entry->addr_len);
+        if(entry->sd < 0)
         {
+            free(entry);
             if(errno == EINTR || errno == EINVAL)
             {
                 syslog(LOG_INFO, "Shutting down\n");
@@ -110,38 +227,12 @@ int main(int argc, char **argv)
         }
         syslog(LOG_INFO, "Accepted connection from %s", inet_ntoa(c.addr.sin_addr));
         
-        file = fopen(OFN, "a");
-        while(1)
-        {
-            memset(buffer, 0, BUFFER_SIZE);
-            recv_len = recv(c.sd, buffer, BUFFER_SIZE-1, 0);
-            if(recv_len < 0)
-            {
-                close(c.sd);
-                goto return_error;
-            }
-            else if(recv_len == 0)
-            {
-                //client terminated connection
-                break;
-            }
-            fputs(buffer, file);
-            if(recv_len < BUFFER_SIZE && buffer[recv_len-1] == '\n')
-            {
-                file = freopen(OFN, "r", file);
-                while(fgets(buffer, BUFFER_SIZE, file) != 0)
-                {
-                    send(c.sd, buffer, strlen(buffer), 0);
-                }
-                break;
-            }
-        }
-        
-        close(c.sd);
-        syslog(LOG_INFO, "Closed connection from %s\n", inet_ntoa(c.addr.sin_addr));
-        fclose(file);
+        //TODO: create thread
+        pthread_create(&entry->tid, 0, thread_entry, entry);
+        LIST_INSERT_HEAD(&cl_head, entry, entries);
     }
 
+    wait_for_threads();
     close(server);
     remove(OFN);
     closelog();
@@ -150,6 +241,7 @@ int main(int argc, char **argv)
 
 return_error:
     syslog(LOG_ERR, "[ERROR %d] %s\n", errno, strerror(errno));
+    wait_for_threads();
     closelog();
     close(server);
     if(c.sd != 0)
