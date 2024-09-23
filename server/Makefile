@@ -1,6 +1,6 @@
 CC = $(CROSS_COMPILE)gcc
 CFLAGS ?= -Wall
-LDFLAGS ?= -pthread
+LDFLAGS ?= -g -pthread
 
 
 AESD_SOURCES = aesdsocket.c
@@ -12,7 +12,7 @@ aesdsocket: $(AESD_SOURCES:.c=.o)
 	$(CC) $(LDFLAGS) $^ -o $@
 
 %.o: %.c
-	$(CC) $(CFLAGS) -g -c -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 
 .phony: clean
