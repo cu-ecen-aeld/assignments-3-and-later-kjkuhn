@@ -49,14 +49,18 @@ int aesd_release(struct inode *inode, struct file *filp)
 ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
                 loff_t *f_pos)
 {
-    ssize_t retval = 0;
+    ssize_t retval;
     PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
     /**
      * TODO: handle read
      */
-    struct aesd_buffer_entry *entry = NULL;
-    size_t offset = 0;
+    struct aesd_buffer_entry *entry;
+    size_t offset;
     size_t bytes_to_read;
+
+    offset = 0;
+    retval = 0;
+    entry = NULL
 
     // Find the entry in the circular buffer corresponding to the current file position
     entry = aesd_circular_buffer_find_entry_offset_for_fpos(&aesd_device.circular_buf, *f_pos, &offset);
@@ -84,10 +88,13 @@ out:
 ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
                 loff_t *f_pos)
 {
-    ssize_t retval = -ENOMEM;
-    PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
+    ssize_t retval;
     struct aesd_buffer_entry entry;
     char *buffer;
+
+    retval = -ENOMEM;
+
+    PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
 
     // TODO: handle write
     // Allocate kernel buffer to copy data from user space
@@ -147,8 +154,10 @@ static int aesd_setup_cdev(struct aesd_dev *dev)
 
 int aesd_init_module(void)
 {
-    dev_t dev = 0;
+    dev_t dev;
     int result;
+
+    dev = 0;
     result = alloc_chrdev_region(&dev, aesd_minor, 1,
             "aesdchar");
     aesd_major = MAJOR(dev);

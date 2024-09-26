@@ -32,18 +32,20 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
 {
     size_t cumulative_size = 0;
     struct aesd_buffer_entry *entry, *result;
-    result = 0;
     size_t i;
+    size_t entry_index, total_entries;
+
+    result = 0;
 #ifdef __KERNEL__
     mutex_lock(&buffer->mtx);
 #else
     pthread_mutex_lock(&buffer->mtx);
 #endif /* __KERNEL__ */
     
-    size_t entry_index = buffer->out_offs;
+    entry_index = buffer->out_offs;
   
     // Determine the total number of entries in the buffer  
-    size_t total_entries = buffer->full ? AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED : buffer->in_offs;
+    total_entries = buffer->full ? AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED : buffer->in_offs;
   
     // Iterate through the circular buffer entries  
     for (i = 0; i < total_entries; i++) {
