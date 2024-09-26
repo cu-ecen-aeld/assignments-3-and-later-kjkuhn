@@ -17,6 +17,7 @@
 #include <linux/types.h>
 #include <linux/cdev.h>
 #include <linux/fs.h> // file_operations
+#include "linux/slab.h"
 #include "aesdchar.h"
 int aesd_major =   0; // use dynamic major
 int aesd_minor =   0;
@@ -50,7 +51,6 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
                 loff_t *f_pos)
 {
     ssize_t retval;
-    PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
     /**
      * TODO: handle read
      */
@@ -58,9 +58,11 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
     size_t offset;
     size_t bytes_to_read;
 
+    PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
+
     offset = 0;
     retval = 0;
-    entry = NULL
+    entry = NULL;
 
     // Find the entry in the circular buffer corresponding to the current file position
     entry = aesd_circular_buffer_find_entry_offset_for_fpos(&aesd_device.circular_buf, *f_pos, &offset);
