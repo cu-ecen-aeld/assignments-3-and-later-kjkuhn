@@ -136,7 +136,7 @@ static int aesd_setup_cdev(struct aesd_dev *dev)
     dev->cdev.ops = &aesd_fops;
     err = cdev_add (&dev->cdev, devno, 1);
     //init buffer
-    aesd_circular_buffer_init(&aesd_device.buffer);
+    aesd_circular_buffer_init(&aesd_device.circular_buf);
     if (err) {
         printk(KERN_ERR "Error %d adding aesd cdev", err);
     }

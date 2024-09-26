@@ -33,7 +33,7 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
     size_t cumulative_size = 0;
     struct aesd_buffer_entry *entry, *result;
     result = 0;
-
+    size_t i;
 #ifdef __KERNEL__
     mutex_lock(&buffer->mtx);
 #else
@@ -46,7 +46,7 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
     size_t total_entries = buffer->full ? AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED : buffer->in_offs;
   
     // Iterate through the circular buffer entries  
-    for (size_t i = 0; i < total_entries; i++) {
+    for (i = 0; i < total_entries; i++) {
         entry = &buffer->entry[entry_index];
   
         // Check if the char_offset is within the current entry's range  
