@@ -112,6 +112,7 @@ return_contents:
 #endif
             while(fgets(buffer, BUFFER_SIZE, file) != 0)
             {
+                syslog(LOG_INFO, "server sends: %s", buffer);
                 if(send(c->sd, buffer, strlen(buffer), 0) < 0)
                 {
                     goto t_exit_with_error;
