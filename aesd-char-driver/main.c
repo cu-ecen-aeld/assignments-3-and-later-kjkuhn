@@ -141,6 +141,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     }
 
     retval = count; // Success, all bytes written
+    *f_pos = aesd_size(&aesd_device.circular_buf);
 
 out_with_kfree:
     kfree(buffer);

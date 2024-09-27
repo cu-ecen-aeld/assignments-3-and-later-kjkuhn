@@ -128,3 +128,19 @@ void aesd_circular_buffer_init(struct aesd_circular_buffer *buffer)
     pthread_mutex_init(&buffer->mtx, 0);
 #endif /* __KERNEL__ */
 }
+
+
+uint64_t aesd_size(struct aesd_circular_buffer *b)
+{
+    uint64_t result;
+    uint8_t idx;
+
+    idx = b->out_offs;
+    result = 0;
+    while (b->in_offs != idx)
+    {
+        result += b->entry[idx].size;
+        idx = (idx + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+    }
+    return result;
+}
