@@ -199,6 +199,7 @@ long aesd_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
         copy_from_user(&as, (const void __user*)arg, sizeof(as)) == 0
     )
     {
+        PDEBUG("running aesd_ioctl with %u,%u\n", as.write_cmd, as.write_cmd_offset)
         while(mutex_lock_interruptible(&dev->lock));
         idx = dev->circular_buf.out_offs;
         while(idx != dev->circular_buf.in_offs)
