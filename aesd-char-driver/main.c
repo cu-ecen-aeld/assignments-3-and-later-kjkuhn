@@ -204,11 +204,14 @@ long aesd_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
         idx = dev->circular_buf.out_offs;
         while(idx != dev->circular_buf.in_offs)
         {
+            PDEBUG("counter is %u, as.write_cmd is %u\n", counter, as.write_cmd);
             if(counter == as.write_cmd)
             {
+                PDEBUG("counter = as.write_cmd = %u\n", counter);
                 if(dev->circular_buf.entry[idx].size >= as.write_cmd_offset)
                 {
                     fp->f_pos = total_size + as.write_cmd_offset;
+                    PDEBUG("f_pos = %lu\n", fp->f_pos);
                     result = 0;
                 }
                 break;
