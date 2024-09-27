@@ -33,7 +33,9 @@ int aesd_open(struct inode *inode, struct file *filp)
     /**
      * TODO: handle open
      */
-    //nothing todo
+    //dev = container_of(inode->i_cdev, struct aesd_dev, cdev);
+    filp->private_data = &aesd_device;
+    
     return 0;
 }
 
@@ -57,12 +59,17 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
     struct aesd_buffer_entry *entry;
     size_t offset;
     size_t bytes_to_read;
+    struct aesd_dev *dev;
 
     PDEBUG("read %zu bytes with offset %lld",count,*f_pos);
 
     offset = 0;
     retval = 0;
     entry = NULL;
+
+    dev = filp->private_data;
+
+    while(mutex_lock_interruptible(&dev->lock));
 
     // Find the entry in the circular buffer corresponding to the current file position
     entry = aesd_circular_buffer_find_entry_offset_for_fpos(&aesd_device.circular_buf, *f_pos, &offset);
@@ -84,6 +91,7 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
     *f_pos += bytes_to_read;
 
 out:
+    mutex_unlock(&dev->lock);
     return retval;
 }
 
@@ -93,8 +101,12 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     ssize_t retval;
     struct aesd_buffer_entry entry;
     char *buffer;
+    struct aesd_dev *dev;
 
     retval = -ENOMEM;
+
+    dev = filp->private_data;
+    while(mutex_lock_interruptible(&dev->lock));
 
     PDEBUG("write %zu bytes with offset %lld",count,*f_pos);
 
@@ -125,6 +137,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 out_with_kfree:
     kfree(buffer);
 out:
+    mutex_unlock(&dev->lock);
     return retval;
 }
 
@@ -144,8 +157,6 @@ static int aesd_setup_cdev(struct aesd_dev *dev)
     dev->cdev.owner = THIS_MODULE;
     dev->cdev.ops = &aesd_fops;
     err = cdev_add (&dev->cdev, devno, 1);
-    //init buffer
-    aesd_circular_buffer_init(&aesd_device.circular_buf);
     if (err) {
         printk(KERN_ERR "Error %d adding aesd cdev", err);
     }
@@ -172,6 +183,10 @@ int aesd_init_module(void)
     /**
      * TODO: initialize the AESD specific portion of the device
      */
+
+    //init buffer
+    aesd_circular_buffer_init(&aesd_device.circular_buf);
+    mutex_init(&aesd_device.lock);
 
     result = aesd_setup_cdev(&aesd_device);
     
