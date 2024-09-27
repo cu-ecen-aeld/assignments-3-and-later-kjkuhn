@@ -19,6 +19,8 @@
 #include <linux/fs.h> // file_operations
 #include "linux/slab.h"
 #include "aesdchar.h"
+#include "aesd_ioctl.h"
+
 int aesd_major =   0; // use dynamic major
 int aesd_minor =   0;
 
@@ -179,9 +181,44 @@ out:
 }
 
 
-int64_t aesd_ioctl(struct file *fp, uint32_t cmd, uint64_t arg)
+long aesd_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 {
+    int64_t result;
+    struct aesd_seekto as;
+    struct aesd_dev *dev;
+    uint8_t idx;
+    uint64_t total_size;
+    uint32_t counter;
 
+    result = -EINVAL;
+    dev = fp->private_data;
+    total_size = 0;
+    counter = 0;
+
+    if(cmd == AESDCHAR_IOCSEEKTO && 
+        copy_from_user(&as, (const void __user*)arg, sizeof(as)) == 0
+    )
+    {
+        while(mutex_lock_interruptible(&dev->lock));
+        idx = dev->circular_buf.out_offs;
+        while(idx != dev->circular_buf.in_offs)
+        {
+            if(counter == as.write_cmd)
+            {
+                if(dev->circular_buf.entry[idx].size >= as.write_cmd_offset)
+                {
+                    fp->f_pos = total_size + as.write_cmd_offset;
+                    result = 0;
+                }
+                break;
+            }
+            total_size += dev->circular_buf.entry[idx].size;
+            idx = (idx + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+            counter++;
+        }   
+        mutex_unlock(&dev->lock);
+    }
+    return result;
 }
 
 loff_t aesd_seek(struct file *fp, loff_t offset, int whence)
@@ -192,7 +229,7 @@ loff_t aesd_seek(struct file *fp, loff_t offset, int whence)
     dev = fp->private_data;
 
     while(mutex_lock_interruptible(&dev->lock));
-    result = fixed_size_llseek(fp, offset, whence, aesd_size(&dev->circular_buf))
+    result = fixed_size_llseek(fp, offset, whence, aesd_size(&dev->circular_buf));
     mutex_unlock(&dev->lock);
     
     return result;
