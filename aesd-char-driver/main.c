@@ -196,13 +196,14 @@ long aesd_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
     counter = 0;
 
     if(cmd == AESDCHAR_IOCSEEKTO && 
-        copy_from_user(&as, (const void __user*)arg, sizeof(as)) == 0
+        copy_from_user(&as, (const void __user*)arg, sizeof(as)) == 0 &&
+        !dev->circular_buf.full && dev->circular_buf.in_offs == dev->circular_buf.out_offs
     )
     {
         PDEBUG("running aesd_ioctl with %u,%u\n", as.write_cmd, as.write_cmd_offset);
         while(mutex_lock_interruptible(&dev->lock));
         idx = dev->circular_buf.out_offs;
-        while(idx != dev->circular_buf.in_offs)
+        do
         {
             PDEBUG("counter is %u, as.write_cmd is %u\n", counter, as.write_cmd);
             if(counter == as.write_cmd)
@@ -219,7 +220,7 @@ long aesd_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
             total_size += dev->circular_buf.entry[idx].size;
             idx = (idx + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
             counter++;
-        }   
+        } while(idx != dev->circular_buf.in_offs);  
         mutex_unlock(&dev->lock);
     }
     return result;
