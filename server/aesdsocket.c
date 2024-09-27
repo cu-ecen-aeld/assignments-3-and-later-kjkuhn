@@ -18,7 +18,15 @@
 
 
 #define BUFFER_SIZE 1024
+
+#ifndef USE_AESD_CHAR_DEVICE
+#define USE_AESD_CHAR_DEVICE 1
+#endif
+
+
+#if USE_AESD_CHAR_DEVICE == 1
 #define ASSIGNMENT_8
+#endif
 
 
 #ifdef ASSIGNMENT_8
@@ -118,7 +126,7 @@ void wait_for_threads()
 
 }
 
-
+#ifndef ASSIGNMENT_8
 void timer_handler(union sigval args)
 {
     FILE *f;
@@ -135,7 +143,7 @@ void timer_handler(union sigval args)
     pthread_mutex_unlock(&wr_mtx);
     fclose(f);
 }
-
+#endif
 
 int main(int argc, char **argv)
 {
@@ -148,9 +156,11 @@ int main(int argc, char **argv)
     int daemon = 0;
     int opt;
     struct client_t *entry;
+#ifndef ASSIGNMENT_8
     timer_t timer;
     struct sigevent sev;
     struct itimerspec its;
+#endif
 
     LIST_INIT(&cl_head);
     pthread_mutex_init(&wr_mtx, 0);
@@ -206,6 +216,7 @@ int main(int argc, char **argv)
         }
     }
 
+#ifndef ASSIGNMENT_8
     memset(&sev, 0, sizeof(sev));
     sev.sigev_notify = SIGEV_THREAD;
     sev.sigev_notify_function = timer_handler;
@@ -215,6 +226,7 @@ int main(int argc, char **argv)
     its.it_value.tv_sec = 10;
     its.it_interval.tv_sec = 10;
     timer_settime(timer, 0, &its, 0);
+#endif
     while(run)
     {
         syslog(LOG_INFO, "waiting for connections on port %hd", ntohs(sa.sin_port));
