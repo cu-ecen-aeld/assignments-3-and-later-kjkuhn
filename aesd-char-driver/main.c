@@ -148,7 +148,9 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     entry.size = count;
 
     // Add the entry to the circular buffer
-    aesd_circular_buffer_add_entry(&dev->circular_buf, &entry);
+    buffer = (char*) aesd_circular_buffer_add_entry(&dev->circular_buf, &entry);
+    if(buffer != 0)
+        kfree(buffer);
 
     // print values
     for(i = 0; i < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; i++)
