@@ -93,6 +93,7 @@ void* thread_entry(void *args)
             {
                 goto t_exit_with_error;
             }
+            syslog(LOG_INFO, "Setting the file to position %u, %u", seekto.write_cmd, seekto.write_cmd_offset);
             goto return_contents;
         }
         else
@@ -104,10 +105,10 @@ void* thread_entry(void *args)
 #endif /* ASSIGNMENT_9 */
         if(recv_len < BUFFER_SIZE && buffer[recv_len-1] == '\n')
         {
-            file = freopen(OFN, "r", file);
 #ifdef ASSIGNMENT_9
 return_contents:
 #endif
+            file = freopen(OFN, "r", file);
             while(fgets(buffer, BUFFER_SIZE, file) != 0)
             {
                 if(send(c->sd, buffer, strlen(buffer), 0) < 0)
