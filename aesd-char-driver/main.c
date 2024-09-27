@@ -197,7 +197,8 @@ long aesd_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 
     if(cmd == AESDCHAR_IOCSEEKTO && 
         copy_from_user(&as, (const void __user*)arg, sizeof(as)) == 0 &&
-        !dev->circular_buf.full && dev->circular_buf.in_offs == dev->circular_buf.out_offs
+        ((dev->circular_buf.full && dev->circular_buf.in_offs == dev->circular_buf.out_offs) ||
+        dev->circular_buf.in_offs != dev->circular_buf.out_offs)
     )
     {
         PDEBUG("running aesd_ioctl with %u,%u\n", as.write_cmd, as.write_cmd_offset);
