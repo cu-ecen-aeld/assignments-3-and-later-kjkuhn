@@ -86,7 +86,7 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
     while(mutex_lock_interruptible(&dev->lock));
 
     // Find the entry in the circular buffer corresponding to the current file position
-    entry = aesd_circular_buffer_find_entry_offset_for_fpos(&aesd_device.circular_buf, *f_pos, &offset);
+    entry = aesd_circular_buffer_find_entry_offset_for_fpos(&dev->circular_buf, *f_pos, &offset);
     if(entry == NULL) {
         // Reached the end of the buffer. For this assignment, we don't read beyond the buffer
         PDEBUG("Nothing to read, returning 0\n");
@@ -148,17 +148,18 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     entry.size = count;
 
     // Add the entry to the circular buffer
-    aesd_circular_buffer_add_entry(&aesd_device.circular_buf, &entry);
+    aesd_circular_buffer_add_entry(&dev->circular_buf, &entry);
 
     // print values
     for(i = 0; i < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; i++)
     {
-        PDEBUG("%d: at %p, length %lu\n", i, aesd_device.circular_buf.entry[i].buffptr, aesd_device.circular_buf.entry[i].size);
-        print_bytes("content: ", aesd_device.circular_buf.entry[i].buffptr, 0, aesd_device.circular_buf.entry[i].size);
+        PDEBUG("%d: at %p, length %lu\n", i, dev->circular_buf.entry[i].buffptr, dev->circular_buf.entry[i].size);
+        print_bytes("content: ", dev->circular_buf.entry[i].buffptr, 0, dev->circular_buf.entry[i].size);
     }
 
     retval = count; // Success, all bytes written
-    *f_pos = aesd_size(&aesd_device.circular_buf);
+    *f_pos = aesd_size(&dev->circular_buf);
+    goto out;
 
 out_with_kfree:
     kfree(buffer);
