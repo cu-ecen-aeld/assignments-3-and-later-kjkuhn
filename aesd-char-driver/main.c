@@ -116,10 +116,9 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
                 loff_t *f_pos)
 {
     ssize_t retval;
-    struct aesd_buffer_entry entry;
-    char *buffer;
     struct aesd_dev *dev;
     int i;
+    char *buffer;
 
     retval = -ENOMEM;
 
@@ -130,28 +129,32 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 
     // TODO: handle write
     // Allocate kernel buffer to copy data from user space
-    buffer = kmalloc(count, GFP_KERNEL);
+    buffer = kmalloc(dev->entry.size + count, GFP_KERNEL);
+
     if(buffer == NULL){
         // Memory allocation failed
         goto out;
     }
-
+    memcpy(buffer, dev->entry.buffptr, dev->entry.size);
+    kfree(dev->entry.buffptr);
     // Copy data from user space to kernel space
-    if(copy_from_user(buffer, buf, count)){
+    if(copy_from_user(&buffer[dev->entry.size], buf, count)){
         // Copy failed
         retval = -EFAULT;
         goto out_with_kfree;
     }
 
     // Prepare the entry for the circular buffer
-    entry.buffptr = buffer;
-    entry.size = count;
+    dev->entry.buffptr = buffer;
+    dev->entry.size += count;
 
     // Add the entry to the circular buffer
-    buffer = (char*) aesd_circular_buffer_add_entry(&dev->circular_buf, &entry);
-    if(buffer != 0)
-        kfree(buffer);
-
+    if(dev->entry.buffptr[dev->entry.size-1] == '\n')
+    {
+        buffer = (char*) aesd_circular_buffer_add_entry(&dev->circular_buf, &dev->entry);
+        if(buffer != 0)
+            kfree(buffer);
+    }
     // print values
     for(i = 0; i < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; i++)
     {
