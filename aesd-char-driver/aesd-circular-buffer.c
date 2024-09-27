@@ -95,8 +95,9 @@ void aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const s
         buffer->out_offs = (buffer->out_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;  
     }  
   
-    // Add the new entry at the current in_offs position  
-    buffer->entry[buffer->in_offs] = *add_entry;  
+    // Add the new entry at the current in_offs position
+    memcpy(&buffer->entry[buffer->in_offs], add_entry, sizeof(struct aesd_buffer_entry));
+    //buffer->entry[buffer->in_offs] = *add_entry;  
   
     // Advance the in_offs to the next position  
     buffer->in_offs = (buffer->in_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;  

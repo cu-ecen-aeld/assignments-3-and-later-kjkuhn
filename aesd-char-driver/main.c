@@ -136,7 +136,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     // print values
     for(i = 0; i < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; i++)
     {
-        PDEBUG("%d: %s\n", i, aesd_device.circular_buf.entry[i].buffptr);
+        PDEBUG("%d: %s at %p\n", i, aesd_device.circular_buf.entry[i].buffptr, aesd_device.circular_buf.entry[i].buffptr);
     }
 
     retval = count; // Success, all bytes written
