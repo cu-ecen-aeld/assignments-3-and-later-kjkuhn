@@ -18,8 +18,12 @@
 
 
 #define BUFFER_SIZE 1024
-#define OFN "/var/tmp/aesdsocketdata"
 
+#ifdef ASSIGNMENT_8
+#define OFN "/dev/aesdchar"
+#else
+#define OFN "/var/tmp/aesdsocketdata"
+#endif /* ASSIGNMENT_8 */
 
 struct client_t {
     struct sockaddr_in addr;
@@ -234,7 +238,9 @@ int main(int argc, char **argv)
 
     wait_for_threads();
     close(server);
+#ifndef ASSIGNMENT_8
     remove(OFN);
+#endif /* ASSIGNMENT_8 */
     closelog();
     return 0;
 
