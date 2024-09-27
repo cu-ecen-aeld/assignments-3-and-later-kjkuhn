@@ -104,7 +104,7 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 
     retval = bytes_to_read;
     *f_pos += bytes_to_read;
-    PDEBUG("returned %ld bytes to user\n", retval);
+    PDEBUG("returned %ld bytes to user from addr %p (orig %p, off %lu)\n", retval, &entry->buffptr[offset], entry->buffptr, offset);
     print_bytes("returning: ", entry->buffptr, offset, bytes_to_read);
 
 out:
