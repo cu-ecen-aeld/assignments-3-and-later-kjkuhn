@@ -49,6 +49,20 @@ int aesd_release(struct inode *inode, struct file *filp)
     return 0;
 }
 
+void print_bytes(const char *msg, char *buffer, size_t offset, size_t nbytes)
+{
+    char *out;
+
+    out = kmalloc(nbytes+1, GFP_KERNEL);
+    if(out)
+    {
+        memcpy(out, &buffer[offset], nbytes);
+        out[nbytes] = 0;
+        PDEBUG("%s %s\n", msg, out);
+        kfree(out);
+    }
+}
+
 ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
                 loff_t *f_pos)
 {
@@ -75,6 +89,7 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
     entry = aesd_circular_buffer_find_entry_offset_for_fpos(&aesd_device.circular_buf, *f_pos, &offset);
     if(entry == NULL) {
         // Reached the end of the buffer. For this assignment, we don't read beyond the buffer
+        PDEBUG("Nothing to read, returning 0\n");
         goto out;
     }
 
@@ -90,6 +105,7 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
     retval = bytes_to_read;
     *f_pos += bytes_to_read;
     PDEBUG("returned %ld bytes to user\n", retval);
+    print_bytes("returning: ", entry->buffptr, offset, bytes_to_read);
 
 out:
     mutex_unlock(&dev->lock);
@@ -137,7 +153,8 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     // print values
     for(i = 0; i < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; i++)
     {
-        PDEBUG("%d: %s at %p, length %lu\n", i, aesd_device.circular_buf.entry[i].buffptr, aesd_device.circular_buf.entry[i].buffptr, aesd_device.circular_buf.entry[i].size);
+        PDEBUG("%d: at %p, length %lu\n", i, aesd_device.circular_buf.entry[i].buffptr, aesd_device.circular_buf.entry[i].size);
+        print_bytes("content: ", aesd_device.circular_buf.entry[i].buffptr, 0, aesd_device.circular_buf.entry[i].size);
     }
 
     retval = count; // Success, all bytes written
