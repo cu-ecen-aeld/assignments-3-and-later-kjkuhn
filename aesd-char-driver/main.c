@@ -89,6 +89,7 @@ ssize_t aesd_read(struct file *filp, char __user *buf, size_t count,
 
     retval = bytes_to_read;
     *f_pos += bytes_to_read;
+    PDEBUG("returned %ld bytes to user\n", retval);
 
 out:
     mutex_unlock(&dev->lock);
@@ -136,7 +137,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     // print values
     for(i = 0; i < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; i++)
     {
-        PDEBUG("%d: %s at %p\n", i, aesd_device.circular_buf.entry[i].buffptr, aesd_device.circular_buf.entry[i].buffptr);
+        PDEBUG("%d: %s at %p, length %lu\n", i, aesd_device.circular_buf.entry[i].buffptr, aesd_device.circular_buf.entry[i].buffptr, aesd_device.circular_buf.entry[i].size);
     }
 
     retval = count; // Success, all bytes written
