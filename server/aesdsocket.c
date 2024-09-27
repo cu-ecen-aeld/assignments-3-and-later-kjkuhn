@@ -90,11 +90,12 @@ void* thread_entry(void *args)
         if(sscanf(buffer, "AESDCHAR_IOCSEEKTO:%u,%u", &seekto.write_cmd, &seekto.write_cmd_offset) == 2)
         {
             file = freopen(OFN, "r", file);
+            syslog(LOG_INFO, "Setting the file to position %u, %u", seekto.write_cmd, seekto.write_cmd_offset);
             if(ioctl(fileno(file), AESDCHAR_IOCSEEKTO, &seekto) != 0)
             {
                 goto t_exit_with_error;
             }
-            syslog(LOG_INFO, "Setting the file to position %u, %u", seekto.write_cmd, seekto.write_cmd_offset);
+            syslog(LOG_INFO, "IOCTL - OK");
             goto return_contents;
         }
         else
