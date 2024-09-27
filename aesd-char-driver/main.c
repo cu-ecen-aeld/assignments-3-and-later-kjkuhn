@@ -99,9 +99,10 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
                 loff_t *f_pos)
 {
     ssize_t retval;
-    struct aesd_buffer_entry entry;
+    struct aesd_buffer_entry *entry;
     char *buffer;
     struct aesd_dev *dev;
+    int i;
 
     retval = -ENOMEM;
 
@@ -131,6 +132,12 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
 
     // Add the entry to the circular buffer
     aesd_circular_buffer_add_entry(&aesd_device.circular_buf, &entry);
+
+    // print values
+    for(i = 0; i < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED; i++)
+    {
+        PDEBUG("%d: %s\n", i, aesd_device.circular_buf.entry[i].buffptr);
+    }
 
     retval = count; // Success, all bytes written
 
