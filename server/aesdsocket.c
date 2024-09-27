@@ -13,7 +13,7 @@
 #include "time.h"
 #include "sys/queue.h"
 #include "pthread.h"
-
+#include "../aesd-char-driver/aesd_ioctl.h"
 
 
 
@@ -26,7 +26,10 @@
 
 #if USE_AESD_CHAR_DEVICE == 1
 #define ASSIGNMENT_8
+#define ASSIGNMENT_9
 #endif
+
+
 
 
 #ifdef ASSIGNMENT_8
@@ -64,6 +67,9 @@ void* thread_entry(void *args)
     int recv_len;
     char buffer[BUFFER_SIZE];
     FILE *file;
+#ifdef ASSIGNMENT_9
+    struct aesd_seekto seekto;
+#endif
     struct client_t *c = (struct client_t*)args;
     pthread_mutex_lock(&wr_mtx);
     file = fopen(OFN, "a");
@@ -80,10 +86,28 @@ void* thread_entry(void *args)
             //client terminated connection
             break;
         }
+#ifdef ASSIGNMENT_9
+        if(sscanf(buffer, "AESDCHAR_IOCSEEKTO:%u,%u", &seekto.write_cmd, &seekto.write_cmd_offset) == 2)
+        {
+            if(ioctl(fileno(file), AESDCHAR_IOCSEEKTO, &seekto) != 0)
+            {
+                goto t_exit_with_error;
+            }
+            goto return_contents;
+        }
+        else
+        {
+            fputs(buffer, file);
+        }
+#else
         fputs(buffer, file);
+#endif /* ASSIGNMENT_9 */
         if(recv_len < BUFFER_SIZE && buffer[recv_len-1] == '\n')
         {
             file = freopen(OFN, "r", file);
+#ifdef ASSIGNMENT_9
+return_contents:
+#endif
             while(fgets(buffer, BUFFER_SIZE, file) != 0)
             {
                 if(send(c->sd, buffer, strlen(buffer), 0) < 0)
