@@ -22,7 +22,7 @@
 int aesd_major =   0; // use dynamic major
 int aesd_minor =   0;
 
-MODULE_AUTHOR("Your Name Here"); /** TODO: fill in your name **/
+MODULE_AUTHOR("kjkuhn"); 
 MODULE_LICENSE("Dual BSD/GPL");
 
 struct aesd_dev aesd_device;
@@ -178,12 +178,34 @@ out:
     return retval;
 }
 
+
+int64_t aesd_ioctl(struct file *fp, uint32_t cmd, uint64_t arg)
+{
+
+}
+
+loff_t aesd_seek(struct file *fp, loff_t offset, int whence)
+{
+    struct aesd_dev *dev;
+    loff_t result;
+
+    dev = fp->private_data;
+
+    while(mutex_lock_interruptible(&dev->lock));
+    result = fixed_size_llseek(fp, offset, whence, aesd_size(&dev->circular_buf))
+    mutex_unlock(&dev->lock);
+    
+    return result;
+}
+
 struct file_operations aesd_fops = {
     .owner =    THIS_MODULE,
     .read =     aesd_read,
     .write =    aesd_write,
     .open =     aesd_open,
     .release =  aesd_release,
+    .llseek =   aesd_seek,
+    .unlocked_ioctl = aesd_ioctl,
 };
 
 static int aesd_setup_cdev(struct aesd_dev *dev)
