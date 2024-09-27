@@ -18,6 +18,8 @@
 
 
 #define BUFFER_SIZE 1024
+#define ASSIGNMENT_8
+
 
 #ifdef ASSIGNMENT_8
 #define OFN "/dev/aesdchar"
