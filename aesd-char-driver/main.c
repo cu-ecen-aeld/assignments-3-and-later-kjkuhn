@@ -135,8 +135,12 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
         // Memory allocation failed
         goto out;
     }
-    memcpy(buffer, dev->entry.buffptr, dev->entry.size);
-    kfree(dev->entry.buffptr);
+    if(dev->entry.size > 0)
+    {
+        memcpy(buffer, dev->entry.buffptr, dev->entry.size);
+        kfree(dev->entry.buffptr);
+    }
+
     // Copy data from user space to kernel space
     if(copy_from_user(&buffer[dev->entry.size], buf, count)){
         // Copy failed
@@ -152,6 +156,7 @@ ssize_t aesd_write(struct file *filp, const char __user *buf, size_t count,
     if(dev->entry.buffptr[dev->entry.size-1] == '\n')
     {
         buffer = (char*) aesd_circular_buffer_add_entry(&dev->circular_buf, &dev->entry);
+        memset(&dev->entry, 0, sizeof(struct aesd_buffer_entry));
         if(buffer != 0)
             kfree(buffer);
     }
